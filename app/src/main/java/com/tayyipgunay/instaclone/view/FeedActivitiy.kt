@@ -21,109 +21,69 @@ import com.tayyipgunay.instaclone.model.Post
 
 class FeedActivitiy : AppCompatActivity() {
     private lateinit var binding: ActivityFeedActivitiyBinding
-    private lateinit var auth: FirebaseAuth
-    private lateinit var db:FirebaseFirestore
-    private lateinit var  postArrayList:ArrayList<Post>
-    private lateinit var feedRecyclerAdapter: FeedRecyclerAdapter
+    private lateinit var auth: FirebaseAuth // Firebase kimlik doğrulama nesnesi
+    private lateinit var db: FirebaseFirestore // Firestore veritabanı işlemleri için nesne
+    private lateinit var postArrayList: ArrayList<Post> // Gönderileri tutan liste
+    private lateinit var feedRecyclerAdapter: FeedRecyclerAdapter // RecyclerView adaptörü
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding= ActivityFeedActivitiyBinding.inflate(layoutInflater)
-        val view=binding.root
+        binding = ActivityFeedActivitiyBinding.inflate(layoutInflater)
+        val view = binding.root
         setContentView(view)
-        auth = FirebaseAuth.getInstance()
-        db=FirebaseFirestore.getInstance()
-        postArrayList=ArrayList<Post>()
 
-        getData()
-        binding.RecyclerView.layoutManager=LinearLayoutManager(this@FeedActivitiy)
+        auth = FirebaseAuth.getInstance() // Firebase kimlik doğrulama başlatılıyor
+        db = FirebaseFirestore.getInstance() // Firestore başlatılıyor
+        postArrayList = ArrayList<Post>() // Boş bir liste başlatılıyor
 
-        feedRecyclerAdapter=FeedRecyclerAdapter(postArrayList)
-        binding.RecyclerView.adapter=feedRecyclerAdapter
+        getData() // Firestore'dan verileri al
+        binding.RecyclerView.layoutManager = LinearLayoutManager(this@FeedActivitiy)
 
-        /* enableEdgeToEdge()
-         setContentView(R.layout.activity_feed_activitiy)
-         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-             insets
-         }*/
-    }
-    private  fun getData(){
-db.collection("Posts").orderBy("date", Query.Direction.DESCENDING)
-    .addSnapshotListener { value, error ->
-     if(error!=null){
-         Toast.makeText(this@FeedActivitiy,error.localizedMessage,Toast.LENGTH_LONG).show()
-     }
-    if(value!=null){//değer null i değil ise
-        if(!value.isEmpty){//döküman olmayabilir.
-
-
-          /// val documents= value.documents
-
-
-
-             postArrayList.clear()
-            for(document in value){
-                // Belgeden "comment" alanını doğrudan alır ve String olarak dönüştürür
-                val comment = document.get("comment") as String
-
-//  "document.get" metodu, "comment" alanına doğrudan erişir.
-// Performans açısından daha verimlidir çünkü sadece gerekli alanı alır.
-// Ancak, eğer "comment" alanı String değilse, bu kod çalışırken hata verebilir.
-
-
-/* Belgenin tüm verilerini bir Map olarak alır ve "comment" alanını bu Map'ten çeker
-                val a = document.data.get("comment") as String
- Yorum: "document.data" önce belgenin tüm alanlarını bir Map yapısına yükler.
- Daha sonra "comment" alanını bu Map'ten alır.
- Performans olarak biraz daha maliyetlidir çünkü tüm veriler Map'e dönüştürülür.
- Aynı şekilde, "comment" alanı String değilse, burada da çalışma zamanı hatası alabilirsiniz.
-
-*/
-              val useremail=document.get("userEmail")as String
-              val downloadUrl=document.get("downloadUrl")as String
-           //   val date=document.getDate("Date")
-                val post= Post(useremail,comment,downloadUrl)
-                postArrayList.add(post)
-
-
-//tarihe nereden ulaştık.
-
-
-          }
-            feedRecyclerAdapter.notifyDataSetChanged()
-
-        }
+        feedRecyclerAdapter = FeedRecyclerAdapter(postArrayList)
+        binding.RecyclerView.adapter = feedRecyclerAdapter
     }
 
+    // Firestore'dan gönderileri çekmek için kullanılan fonksiyon
+    private fun getData() {
+        db.collection("Posts").orderBy("date", Query.Direction.DESCENDING)
+            .addSnapshotListener { value, error ->
+                if (error != null) {
+                    Toast.makeText(this@FeedActivitiy, error.localizedMessage, Toast.LENGTH_LONG).show()
+                    return@addSnapshotListener
+                }
+                if (value != null && !value.isEmpty) { // Eğer belge boş değilse
+                    postArrayList.clear() // Önce liste temizlenir
+                    for (document in value) {
+                        val comment = document.get("comment") as String // Yorum bilgisi
+                        val useremail = document.get("userEmail") as String // Kullanıcı e-postası
+                        val downloadUrl = document.get("downloadUrl") as String // Resim URL'si
 
-
-}
+                        val post = Post(useremail, comment, downloadUrl) // Post nesnesi oluştur
+                        postArrayList.add(post) // Listeye ekle
+                    }
+                    feedRecyclerAdapter.notifyDataSetChanged() // Adapter'e değişiklik bildir
+                }
+            }
     }
 
+    // Menü seçeneklerini oluşturma fonksiyonu
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        val menuInflater=getMenuInflater()
-        menuInflater.inflate(R.menu.instamenu,menu)
+        val menuInflater = menuInflater
+        menuInflater.inflate(R.menu.instamenu, menu)
         return super.onCreateOptionsMenu(menu)
-
     }
 
+    // Menü seçeneklerine tıklanınca yapılacak işlemler
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if(item.itemId== R.id.add_post){
-            val intent=Intent(this@FeedActivitiy, UploadActivitiy::class.java)
+        if (item.itemId == R.id.add_post) {
+            val intent = Intent(this@FeedActivitiy, UploadActivitiy::class.java)
             startActivity(intent)
-
-        }
-        else if (item.itemId== R.id.Signout){
-            auth.signOut()
-            val intent=Intent(this@FeedActivitiy, MainActivity::class.java)
+        } else if (item.itemId == R.id.Signout) {
+            auth.signOut() // Kullanıcı çıkış yapıyor
+            val intent = Intent(this@FeedActivitiy, MainActivity::class.java)
             startActivity(intent)
-            finish()
+            finish() // Activity kapatılıyor
         }
-
-
         return super.onOptionsItemSelected(item)
     }
-
 }

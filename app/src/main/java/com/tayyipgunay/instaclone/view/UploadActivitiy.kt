@@ -26,148 +26,101 @@ class UploadActivitiy : AppCompatActivity() {
     private lateinit var ActivityResultLauncher: ActivityResultLauncher<Intent>
     private lateinit var permissionLauncher: ActivityResultLauncher<String>
 
-    //private lateinit var selectedPicture: Uri
-    private lateinit var auth: FirebaseAuth
-    private lateinit var storage: FirebaseStorage
-    private lateinit var db: FirebaseFirestore
-    ///var reference=storage.reference //
+    private lateinit var auth: FirebaseAuth // Kullanıcı kimlik doğrulama için FirebaseAuth nesnesi
+    private lateinit var storage: FirebaseStorage // Firebase Storage kullanımı için nesne
+    private lateinit var db: FirebaseFirestore // Firestore veritabanı işlemleri için nesne
 
+    var selectedPicture: Uri? = null // Kullanıcının seçtiği resmin URI bilgisi
 
-    var selectedPicture: Uri? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityUploadActivitiyBinding.inflate(layoutInflater)
         val view = binding.root
         setContentView(view)
-        registerLauncher()
-        auth = FirebaseAuth.getInstance()
-        storage = FirebaseStorage.getInstance()
-        selectedPicture = null
-        db = Firebase.firestore
-        //reference=storage.reference
 
+        registerLauncher() // Galeri ve izin işlemlerini yönetecek launcher'ları kaydet
 
+        auth = FirebaseAuth.getInstance() // Firebase kimlik doğrulama başlat
+        storage = FirebaseStorage.getInstance() // Firebase Storage başlat
+        db = Firebase.firestore // Firestore başlat
     }
-    /* enableEdgeToEdge()
-     setContentView(R.layout.activity_upload_activitiy)
-     ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-         val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-         v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-         insets
-     }*/
 
+    // Resim yükleme işlemini başlatan fonksiyon
     fun upload(view: View) {
         try {
-            val uuid = UUID.randomUUID()
-            val imageaName = "$uuid.jpg"
-            val reference = storage.reference
+            val uuid = UUID.randomUUID() // Her resme benzersiz bir kimlik atamak için UUID oluştur
+            val imageaName = "$uuid.jpg" // Dosya adı olarak UUID kullan
+            val reference = storage.reference // Firebase Storage referansı al
 
-            // reference.putFile(selectedPicture)
-            //val imageReference = reference.child("images/$imageaName")
-            val imageReference = reference.child("images").child(imageaName)//images içerisinde farklı resim idler,
-            // if(selectedPicture!=null){// gerek duyuluyorsa yapılabilir.
             selectedPicture?.let { selectedPicture ->
+                val imageReference = reference.child("images").child(imageaName) // Firebase'de 'images' klasörü altında sakla
 
                 imageReference.putFile(selectedPicture)
-
-                    .addOnSuccessListener {//dosya yükleme ve dosya yükleme başarılı ise olacaklar.
-
+                    .addOnSuccessListener {
                         val uploadPicureReference = reference.child("images").child(imageaName)
 
-                        uploadPicureReference.downloadUrl.addOnSuccessListener { Url->//eğer bir indirme url varsa yükleme başarılı demektir.
-                            Toast.makeText(
-                                this@UploadActivitiy,
-                                "yükleme başarılı",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            //resim indirme url ve diğer bilgileri alıp  postMap kaydedip
-                            // ordan veritabanına ekliyoruz.
-                            val downloadUrl = Url.toString()// indirme url aldık.
-                            //  if(auth.currentUser!=null){//eğer kullanıcı oturum açmadan tuş olursa bunu kullanırız.
+                        // Yüklenen dosyanın URL'sini al
+                        uploadPicureReference.downloadUrl.addOnSuccessListener { Url ->
+                            Toast.makeText(this@UploadActivitiy, "Yükleme başarılı", Toast.LENGTH_LONG).show()
 
-                            val postMap = hashMapOf<String, Any>()//veriTabanına yükleme işlemine başlıyoruz
-                            postMap.put("downloadUrl", downloadUrl)//uri.ToString()
+                            val downloadUrl = Url.toString() // URL'yi string olarak al
 
+                            // Firestore veritabanına yüklenecek verileri içeren HashMap
+                            val postMap = hashMapOf<String, Any>()
+                            postMap.put("downloadUrl", downloadUrl)
                             postMap.put("userEmail", auth.currentUser!!.email!!)
                             postMap.put("comment", binding.commentid.text.toString())
                             postMap.put("date", Timestamp.now())
-                            //db.collection("Posts").document("A").set(postMap)//belirli dosyayı güncellmek için olabilir.eklemek için de olabilir.
-                               db.collection("Posts").add(postMap)
 
-
-                                .addOnSuccessListener {//veriTabanına yükleme.
-                                    //hem yükleme hem indirme başarılı ise  activity kapat.
-
-
-                                    finish()
-
-                                }.addOnFailureListener {
-                                    Toast.makeText(
-                                        this@UploadActivitiy,
-                                        it.localizedMessage,
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                            // Firestore'da 'Posts' koleksiyonuna belge ekle
+                            db.collection("Posts").add(postMap)
+                                .addOnSuccessListener {
+                                    finish() // Yükleme ve veri tabanı işlemi başarılıysa activity'yi kapat
                                 }
-
-                            // }
+                                .addOnFailureListener {
+                                    Toast.makeText(this@UploadActivitiy, it.localizedMessage, Toast.LENGTH_LONG).show()
+                                }
                         }
-                        //dowloadn url-ZfireStore
                     }.addOnFailureListener {
-                        Toast.makeText(this@UploadActivitiy, it.localizedMessage, Toast.LENGTH_LONG)
-                            .show()
-
+                        Toast.makeText(this@UploadActivitiy, it.localizedMessage, Toast.LENGTH_LONG).show()
                     }
             }
-        }
-        // }
-
-        catch (e: Exception) {
-            println("OLMADI!!  " + e.printStackTrace())
+        } catch (e: Exception) {
+            println("Yükleme başarısız: " + e.printStackTrace())
         }
     }
 
+    // Kullanıcının galeriye erişip resim seçmesini sağlayan fonksiyon
     fun selectImage(view: View) {
         if (ContextCompat.checkSelfPermission(this@UploadActivitiy, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_DENIED) {
-            permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
-            //izin reddedildi
+            permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE) // Eğer izin verilmediyse, izin iste
         } else {
-            //izin var
             val intentToGallery = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            ActivityResultLauncher.launch(intentToGallery)
+            ActivityResultLauncher.launch(intentToGallery) // Kullanıcının galeriden resim seçmesini sağla
         }
-
     }
 
+    // Resim seçimi ve izin işlemlerini yönetecek launcher'ları kaydeden fonksiyon
     private fun registerLauncher() {
-
-        val intent = intent
-
         ActivityResultLauncher =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult())
-            { result ->
-                if (result.resultCode == RESULT_OK) {//resim seçilmişse
-
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == RESULT_OK) { // Kullanıcı bir resim seçmişse
                     val imageDataUri = result.data?.data
                     if (imageDataUri != null) {
-                        binding.imageView.setImageURI(imageDataUri)//bitmap ihtiyaç yok uri üzerinden upload edeceğiz
-                        selectedPicture = imageDataUri
+                        binding.imageView.setImageURI(imageDataUri) // Seçilen resmi ImageView'e göster
+                        selectedPicture = imageDataUri // Seçilen resmi sakla
                     }
                 }
-
-
             }
+
         permissionLauncher =
             registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
                 if (result) {
-                    val intentToGallery =
-                        Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                    ActivityResultLauncher.launch(intentToGallery)
+                    val intentToGallery = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                    ActivityResultLauncher.launch(intentToGallery) // Kullanıcı izin verdiyse galeri aç
                 } else {
-                    Toast.makeText(this@UploadActivitiy, "İzin Reddedildi", Toast.LENGTH_LONG)
-                        .show()
+                    Toast.makeText(this@UploadActivitiy, "İzin Reddedildi", Toast.LENGTH_LONG).show()
                 }
             }
     }
-
-
 }

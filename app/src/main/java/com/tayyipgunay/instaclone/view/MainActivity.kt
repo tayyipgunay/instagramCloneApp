@@ -13,43 +13,25 @@ import com.tayyipgunay.instaclone.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private lateinit var auth: FirebaseAuth
-    private  var firebaseUser:FirebaseUser?=null
+    private lateinit var auth: FirebaseAuth // Firebase kimlik doğrulama nesnesi
+    private var firebaseUser: FirebaseUser? = null // Mevcut oturum açmış kullanıcıyı tutan değişken
+
     override fun onCreate(savedInstanceState: Bundle?) {
-
-
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         val view = binding.root
         setContentView(view)
-// Initialize Firebase Auth
+
+        // Firebase Authentication başlatılıyor
         auth = FirebaseAuth.getInstance()
-
-       // val currentUser=auth.currentUser//fireBase user'a dönüşüyor.
-        firebaseUser=auth.currentUser
-        updateUI(firebaseUser)
-
-
-
-        /*firebaseUser=auth.currentUser
-        updateUI(firebaseUser)*/
-
-
-        /*if(currentUser!=null){
-             val intent=Intent(this@MainActivity, FeedActivitiy::class.java)
-             startActivity(intent)
-             finish()
-         }*/
-        /* enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets*/
+        firebaseUser = auth.currentUser // Mevcut oturum açmış kullanıcı alınıyor
+        updateUI(firebaseUser) // UI güncelleniyor
     }
-    private fun updateUI(user:FirebaseUser ?) {
+
+    // Kullanıcının giriş yapıp yapmadığını kontrol eden fonksiyon
+    private fun updateUI(user: FirebaseUser?) {
         if (user != null) {
-            // Kullanıcı oturum açtıysa FeedActivity'e yönlendir
+            // Kullanıcı oturum açtıysa FeedActivity'ye yönlendir
             val intent = Intent(this@MainActivity, FeedActivitiy::class.java)
             startActivity(intent)
             finish() // MainActivity'yi kapatıyoruz
@@ -59,48 +41,43 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Kullanıcı kayıt olma butonuna bastığında çalışan fonksiyon
     fun signUpClicked(view: View) {
         val email = binding.emailText.text.toString()
         val password = binding.passwordText.text.toString()
-        if (!email.isNotEmpty() || !password.isNotEmpty()) {
-            Toast.makeText(this@MainActivity, " lütfen boş yerleri doldurun", Toast.LENGTH_LONG)
-                .show()
+
+        if (email.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this@MainActivity, "Lütfen boş yerleri doldurun", Toast.LENGTH_LONG).show()
         } else {
             auth.createUserWithEmailAndPassword(email, password).addOnSuccessListener {
+                // Kayıt başarılı olursa FeedActivity'ye yönlendir
                 val intent = Intent(this@MainActivity, FeedActivitiy::class.java)
                 startActivity(intent)
                 finish()
-
             }.addOnFailureListener {
                 Toast.makeText(this@MainActivity, it.localizedMessage, Toast.LENGTH_LONG).show()
             }
-
         }
     }
 
+    // Kullanıcı giriş yapma butonuna bastığında çalışan fonksiyon
     fun signInClicked(view: View) {
         val email = binding.emailText.text.toString()
         val password = binding.passwordText.text.toString()
+
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this@MainActivity, "Lütfen boş yerleri doldurun", Toast.LENGTH_LONG).show()
         } else {
             auth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this) { task ->
                     if (task.isSuccessful) {
-                       firebaseUser=auth.currentUser
-                        /*
-                         Bu satır, giriş başarılı olduğunda Firebase'den oturum açan kullanıcının bilgilerini
-                         günceller ve firebaseUser değişkenine atar.
-                         Eğer bu satırı yazmazsan, firebaseUser güncellenmez ve önceki değeri kalır.
-                        */
-
-                        updateUI(firebaseUser)  // Başarılı giriş sonrası UI'yi güncelle
+                        firebaseUser = auth.currentUser // Giriş başarılı olursa oturum açan kullanıcıyı güncelle
+                        updateUI(firebaseUser) // UI'yi güncelle
                     } else {
                         Toast.makeText(this@MainActivity, "Giriş Başarısız", Toast.LENGTH_LONG).show()
-                        updateUI(null)  // Başarısız girişte UI'yi güncelle
+                        updateUI(null) // Başarısız girişte UI'yi güncelle
                     }
                 }
         }
     }
 }
-
